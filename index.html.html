@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlotaControl · Sistema de Mantenimiento</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #161920;
+  --bg3: #1e2230;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #e8eaf0;
+  --text2: #8b90a0;
+  --text3: #555b6e;
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.12);
+  --teal: #14b8a6;
+  --teal-dim: rgba(20,184,166,0.12);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.12);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --purple: #8b5cf6;
+  --purple-dim: rgba(139,92,246,0.12);
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+input, select, textarea, button { font-family: 'DM Sans', sans-serif; font-size: 14px; }
+
+/* LAYOUT */
+.app { display: flex; flex-direction: column; height: 100vh; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.logo { font-size: 15px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+.logo span { color: var(--blue); }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.user-chip { display: flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 30px; cursor: pointer; }
+.avatar { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+.av-blue { background: var(--blue-dim); color: var(--blue); }
+.av-teal { background: var(--teal-dim); color: var(--teal); }
+.av-purple { background: var(--purple-dim); color: var(--purple); }
+.user-name { font-size: 13px; color: var(--text); }
+.role-badge { font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 500; }
+.rb-admin { background: var(--purple-dim); color: var(--purple); }
+.rb-afil { background: var(--blue-dim); color: var(--blue); }
+.rb-maestro { background: var(--teal-dim); color: var(--teal); }
+
+.main { display: flex; flex: 1; overflow: hidden; }
+.sidebar { width: 200px; background: var(--bg2); border-right: 1px solid var(--border); padding: 16px 8px; display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; overflow-y: auto; }
+.nav-section { font-size: 10px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; padding: 8px 10px 4px; }
+.nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--radius); font-size: 13px; color: var(--text2); cursor: pointer; border: none; background: transparent; width: 100%; text-align: left; transition: all .15s; }
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--blue-dim); color: var(--blue); font-weight: 500; }
+.nav-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: .7; }
+.nav-item.active svg { opacity: 1; }
+
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* COMPONENTS */
+.page-title { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 4px; letter-spacing: -0.3px; }
+.page-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+.grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+.grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 24px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.metric { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; }
+.metric-val { font-size: 28px; font-weight: 600; color: var(--text); letter-spacing: -1px; font-family: 'DM Mono', monospace; }
+.metric-lbl { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.metric-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 16px; }
+.card-title { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); border: 1px solid var(--border2); background: transparent; color: var(--text2); cursor: pointer; font-size: 13px; transition: all .15s; }
+.btn:hover { background: var(--bg3); color: var(--text); }
+.btn-primary { background: var(--blue); color: #fff; border-color: transparent; }
+.btn-primary:hover { background: #2563eb; }
+.btn-sm { padding: 5px 11px; font-size: 12px; }
+.btn-danger { color: var(--red); border-color: rgba(239,68,68,0.2); }
+.btn-danger:hover { background: var(--red-dim); }
+
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.field label { font-size: 12px; color: var(--text2); }
+.field input, .field select, .field textarea {
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 9px 12px; color: var(--text); outline: none; transition: border-color .15s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); }
+.field textarea { resize: vertical; min-height: 80px; }
+.field select option { background: var(--bg3); }
+
+/* TABLE */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-size: 10px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; padding: 0 12px 10px; border-bottom: 1px solid var(--border); }
+td { padding: 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+.pill-green { background: var(--green-dim); color: var(--green); }
+.pill-amber { background: var(--amber-dim); color: var(--amber); }
+.pill-red { background: var(--red-dim); color: var(--red); }
+.pill-blue { background: var(--blue-dim); color: var(--blue); }
+.pill-teal { background: var(--teal-dim); color: var(--teal); }
+.pill-gray { background: var(--bg3); color: var(--text2); }
+.pill-purple { background: var(--purple-dim); color: var(--purple); }
+
+/* SEMAFORO */
+.semaforo { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.s-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.s-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.s-red { background: var(--red); box-shadow: 0 0 6px var(--red); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* DROPZONE */
+.dropzone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 28px; text-align: center; color: var(--text3); cursor: pointer; transition: all .15s; margin-bottom: 12px; }
+.dropzone:hover { border-color: var(--blue); color: var(--text2); background: var(--blue-dim); }
+.dropzone svg { width: 28px; height: 28px; display: block; margin: 0 auto 8px; opacity: .5; }
+
+/* VEH CARD */
+.veh-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 8px; cursor: pointer; transition: all .15s; }
+.veh-card:hover { border-color: var(--border2); }
+.veh-card.selected { border-color: var(--blue); background: var(--blue-dim); }
+.veh-icon { width: 40px; height: 40px; border-radius: var(--radius); background: var(--bg2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* CAT SELECTOR */
+.cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+.cat-btn { padding: 14px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--bg3); cursor: pointer; text-align: center; transition: all .15s; color: var(--text2); }
+.cat-btn:hover { border-color: var(--border2); }
+.cat-btn.selected-red { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+.cat-btn.selected-green { border-color: var(--green); background: var(--green-dim); color: var(--green); }
+.cat-btn.selected-blue { border-color: var(--blue); background: var(--blue-dim); color: var(--blue); }
+.cat-btn svg { width: 22px; height: 22px; display: block; margin: 0 auto 6px; }
+.cat-btn .cat-name { font-size: 13px; font-weight: 500; }
+.cat-btn .cat-sub { font-size: 11px; opacity: .7; margin-top: 2px; }
+
+/* FILE CHIP */
+.file-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.fchip { display: inline-flex; align-items: center; gap: 5px; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--text2); }
+
+/* HISTORIAL TIMELINE */
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before { content:''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 1px; background: var(--border2); }
+.tl-item { position: relative; margin-bottom: 20px; }
+.tl-dot { position: absolute; left: -20px; top: 4px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg2); }
+.tl-dot-green { background: var(--green); }
+.tl-dot-amber { background: var(--amber); }
+.tl-dot-red { background: var(--red); }
+.tl-dot-blue { background: var(--blue); }
+.tl-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.tl-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.tl-tipo { font-size: 13px; font-weight: 500; color: var(--text); }
+.tl-meta { font-size: 12px; color: var(--text3); }
+
+/* SEARCH */
+.search-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.search-row input { flex: 1; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); padding: 9px 12px; color: var(--text); outline: none; }
+.search-row input:focus { border-color: var(--blue); }
+
+/* ROLE SWITCHER */
+.role-switcher { display: flex; gap: 8px; padding: 12px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.rsw-btn { flex: 1; padding: 8px; font-size: 12px; border-radius: var(--radius); border: 1px solid var(--border); background: transparent; cursor: pointer; color: var(--text2); text-align: center; transition: all .15s; max-width: 180px; }
+.rsw-btn:hover { background: var(--bg3); color: var(--text); }
+.rsw-btn.on { font-weight: 500; }
+.rsw-admin.on { background: var(--purple-dim); color: var(--purple); border-color: rgba(139,92,246,0.3); }
+.rsw-afil.on { background: var(--blue-dim); color: var(--blue); border-color: rgba(59,130,246,0.3); }
+.rsw-maestro.on { background: var(--teal-dim); color: var(--teal); border-color: rgba(20,184,166,0.3); }
+
+.info-box { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; font-size: 12px; color: var(--text2); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+</style>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)">
+  <div style="width:100%;max-width:400px;padding:24px">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:26px;font-weight:700;letter-spacing:-0.5px;color:var(--text)">Flota<span style="color:var(--blue)">Control</span></div>
+      <div style="font-size:13px;color:var(--text2);margin-top:6px">Sistema de gestión de mantenimiento</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px">
+      <div style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:16px">Iniciar sesión</div>
+      <div class="field"><label>Usuario</label><input type="text" id="login-user" placeholder="Ingresa tu usuario" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="login-pass" placeholder="Ingresa tu contraseña" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div id="login-error" style="font-size:12px;color:var(--red);margin-bottom:10px;display:none">Usuario o contraseña incorrectos</div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="doLogin()">Entrar</button>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">Usuarios de prueba — haz clic para autocompletar</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div onclick="fillLogin('admin','admin123')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg3);border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);transition:border-color .15s" onmouseover="this.style.borderColor='rgba(139,92,246,0.5)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="avatar av-purple" style="width:32px;height:32px;font-size:12px">AD</div>
+              <div><div style="font-size:13px;font-weight:500;color:var(--text)">Administrador</div><div style="font-size:11px;color:var(--text3)">admin &nbsp;/&nbsp; admin123</div></div>
+            </div>
+            <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:var(--purple-dim);color:var(--purple);font-weight:500">Admin</span>
+          </div>
+          <div onclick="fillLogin('juan.rodriguez','afil123')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg3);border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);transition:border-color .15s" onmouseover="this.style.borderColor='rgba(59,130,246,0.5)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="avatar av-blue" style="width:32px;height:32px;font-size:12px">JR</div>
+              <div><div style="font-size:13px;font-weight:500;color:var(--text)">Juan Rodríguez</div><div style="font-size:11px;color:var(--text3)">juan.rodriguez &nbsp;/&nbsp; afil123</div></div>
+            </div>
+            <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:var(--blue-dim);color:var(--blue);font-weight:500">Afiliado</span>
+          </div>
+          <div onclick="fillLogin('mario.acosta','maestro123')" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg3);border-radius:var(--radius);cursor:pointer;border:1px solid var(--border);transition:border-color .15s" onmouseover="this.style.borderColor='rgba(20,184,166,0.5)'" onmouseout="this.style.borderColor='var(--border)'">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="avatar av-teal" style="width:32px;height:32px;font-size:12px">MA</div>
+              <div><div style="font-size:13px;font-weight:500;color:var(--text)">Mario Acosta</div><div style="font-size:11px;color:var(--text3)">mario.acosta &nbsp;/&nbsp; maestro123</div></div>
+            </div>
+            <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:var(--teal-dim);color:var(--teal);font-weight:500">Maestro</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen" style="display:none">
+<div class="app">
+  <div class="topbar">
+    <div class="logo">Flota<span>Control</span></div>
+    <div class="topbar-right">
+      <div class="user-chip" id="user-chip">
+        <div class="avatar av-purple" id="av">AD</div>
+        <span class="user-name" id="uname">Administrador</span>
+        <span class="role-badge rb-admin" id="rbadge">Admin</span>
+      </div>
+      <button class="btn btn-sm" onclick="doLogout()" style="color:var(--text2)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Salir
+      </button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+</div>
+
+<script>
+
+const USERS = {
+  'admin': { pass: 'admin123', role: 'admin' },
+  'juan.rodriguez': { pass: 'afil123', role: 'afil' },
+  'mario.acosta': { pass: 'maestro123', role: 'maestro' }
+};
+
+function fillLogin(user, pass) {
+  document.getElementById('login-user').value = user;
+  document.getElementById('login-pass').value = pass;
+  document.getElementById('login-error').style.display = 'none';
+}
+
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value.trim();
+  const u = USERS[user];
+  if (!u || u.pass !== pass) {
+    document.getElementById('login-error').style.display = 'block';
+    return;
+  }
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  const firstPage = ROLES[u.role].nav.find(n => n.id);
+  currentPage = firstPage ? firstPage.id : 'dashboard';
+  currentRole = u.role;
+  const r = ROLES[u.role];
+  document.getElementById('av').className = `avatar ${r.av}`;
+  document.getElementById('av').textContent = r.initials;
+  document.getElementById('uname').textContent = r.name;
+  document.getElementById('rbadge').className = `role-badge ${r.badge}`;
+  document.getElementById('rbadge').textContent = r.badgeTxt;
+  renderSidebar(u.role);
+  renderContent();
+}
+
+function doLogout() {
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').style.display = 'none';
+}
+const ROLES = {
+  admin: {
+    name: 'Administrador', initials: 'AD', av: 'av-purple', badge: 'rb-admin', badgeTxt: 'Admin',
+    nav: [
+      { section: 'General' },
+      { id: 'dashboard', label: 'Inicio', icon: 'home' },
+      { section: 'Gestión' },
+      { id: 'import', label: 'Importar Excel', icon: 'upload' },
+      { id: 'afiliados', label: 'Afiliados', icon: 'users' },
+      { id: 'vehiculos', label: 'Vehículos', icon: 'bus' },
+      { id: 'maestros', label: 'Usuarios maestros', icon: 'shield' },
+      { id: 'nuevo', label: 'Nuevo afiliado', icon: 'plus' },
+    ]
+  },
+  afil: {
+    name: 'Juan Rodríguez', initials: 'JR', av: 'av-blue', badge: 'rb-afil', badgeTxt: 'Afiliado',
+    nav: [
+      { section: 'Mi flota' },
+      { id: 'mis-buses', label: 'Mis buses', icon: 'bus' },
+      { id: 'nuevo-mant', label: 'Nuevo mantenimiento', icon: 'plus' },
+      { id: 'historial', label: 'Historial', icon: 'history' },
+    ]
+  },
+  maestro: {
+    name: 'Mario Acosta', initials: 'MA', av: 'av-teal', badge: 'rb-maestro', badgeTxt: 'Maestro',
+    nav: [
+      { section: 'Panel' },
+      { id: 'panel-maestro', label: 'Dashboard', icon: 'chart' },
+      { id: 'registros', label: 'Todos los registros', icon: 'list' },
+      { id: 'flota', label: 'Estado de flota', icon: 'semaforo' },
+    ]
+  }
+};
+
+const ICONS = {
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+  upload: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
+  users: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`,
+  bus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="22" height="14" rx="2"/><path d="M1 9h22M8 21l-2-4M16 21l2-4M1 17h22"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  history: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>`,
+  chart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
+  semaforo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="10" height="20" rx="3"/><circle cx="12" cy="7" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="17" r="2"/></svg>`,
+  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+};
+
+let currentRole = 'admin';
+let currentPage = 'dashboard';
+
+const PAGES = {
+  dashboard: () => `
+    <p class="page-title">Buen día, Administrador</p>
+    <p class="page-sub">Resumen general del sistema</p>
+    <div class="grid4">
+      <div class="metric"><div class="metric-val">287</div><div class="metric-lbl"><span class="metric-dot" style="background:var(--blue)"></span>Afiliados activos</div></div>
+      <div class="metric"><div class="metric-val">312</div><div class="metric-lbl"><span class="metric-dot" style="background:var(--teal)"></span>Buses registrados</div></div>
+      <div class="metric"><div class="metric-val">124</div><div class="metric-lbl"><span class="metric-dot" style="background:var(--green)"></span>Mantenimientos este mes</div></div>
+      <div class="metric"><div class="metric-val">5</div><div class="metric-lbl"><span class="metric-dot" style="background:var(--purple)"></span>Usuarios maestros</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Últimos registros</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Afiliado</th><th>Bus</th><th>Categoría</th><th>Tipo</th><th>Fecha</th><th>Archivos</th></tr></thead>
+        <tbody>
+          <tr><td>Juan Rodríguez</td><td>ABC-123 · VH-042</td><td><span class="pill pill-green">Preventivo</span></td><td>Cambio de aceite</td><td>17 may 2026</td><td><span class="pill pill-blue">2</span></td></tr>
+          <tr><td>Ana Gómez</td><td>PQR-456 · VH-031</td><td><span class="pill pill-red">Correctivo</span></td><td>Reparación de frenos</td><td>15 may 2026</td><td><span class="pill pill-blue">3</span></td></tr>
+          <tr><td>Carlos Pérez</td><td>LMN-321 · VH-055</td><td><span class="pill pill-blue">Predictivo</span></td><td>Diagnóstico OBD</td><td>12 may 2026</td><td><span class="pill pill-blue">1</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>`,
+
+  import: () => `
+    <p class="page-title">Importar desde Excel</p>
+    <p class="page-sub">Carga masiva de afiliados y buses</p>
+    <div class="card">
+      <div class="card-title">Archivo Excel</div>
+      <div class="dropzone" onclick="showPreview()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Arrastra el archivo Excel aquí o haz clic<br><span style="font-size:11px">.xlsx · .csv · máx 10 MB</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Columnas requeridas: cédula · nombre · correo · teléfono · placa · número interno · marca · modelo · año</div>
+      <button class="btn btn-sm">Descargar plantilla</button>
+    </div>
+    <div class="card" id="preview-card" style="display:none">
+      <div class="card-title">Vista previa · 4 registros detectados</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:var(--radius);font-size:13px"><span style="color:var(--green);font-size:15px">✓</span> Pedro Martínez · CC 1234567 · Volvo B8R · PLT-001</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:var(--radius);font-size:13px"><span style="color:var(--green);font-size:15px">✓</span> Laura Suárez · CC 2345678 · Mercedes OF-1721 · GHJ-445</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:var(--radius);font-size:13px"><span style="color:var(--green);font-size:15px">✓</span> Laura Suárez · CC 2345678 · Marcopolo G7 · KLM-890 <span class="pill pill-blue" style="margin-left:6px">2do bus</span></div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:var(--radius);font-size:13px"><span style="color:var(--amber);font-size:15px">⚠</span> Fila 4 · Correo faltante — se omitirá</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="alert('3 afiliados importados correctamente')">Confirmar importación</button>
+        <button class="btn" onclick="document.getElementById('preview-card').style.display='none'">Cancelar</button>
+      </div>
+    </div>`,
+
+  afiliados: () => `
+    <p class="page-title">Afiliados</p>
+    <p class="page-sub">Gestión de afiliados registrados</p>
+    <div class="search-row">
+      <input type="text" placeholder="Buscar por nombre, cédula o correo...">
+      <button class="btn">Filtrar</button>
+      <button class="btn btn-primary">+ Nuevo afiliado</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Nombre</th><th>Cédula</th><th>Buses</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <tr><td>Juan Rodríguez</td><td>1.023.456</td><td>2 buses</td><td><span class="pill pill-green">Activo</span></td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm btn-danger">Desactivar</button></td></tr>
+          <tr><td>Ana Gómez</td><td>1.034.789</td><td>1 bus</td><td><span class="pill pill-green">Activo</span></td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm btn-danger">Desactivar</button></td></tr>
+          <tr><td>Carlos Pérez</td><td>1.045.123</td><td>1 bus</td><td><span class="pill pill-gray">Inactivo</span></td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm">Activar</button></td></tr>
+          <tr><td>María Torres</td><td>1.056.890</td><td>3 buses</td><td><span class="pill pill-green">Activo</span></td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm btn-danger">Desactivar</button></td></tr>
+        </tbody>
+      </table></div>
+    </div>`,
+
+  vehiculos: () => `
+    <p class="page-title">Buses registrados</p>
+    <p class="page-sub">Gestión de flota y reasignación de propietarios</p>
+    <div class="search-row">
+      <input type="text" placeholder="Buscar por placa, número interno o afiliado...">
+      <button class="btn">Filtrar</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Estado</th><th>Placa</th><th>N° interno</th><th>Bus</th><th>Afiliado actual</th><th>Último mtto</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <tr><td><span class="semaforo s-green"></span></td><td>ABC-123</td><td>VH-042</td><td>Volvo B8R 2021</td><td>Juan Rodríguez</td><td>17 may 2026</td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm">Reasignar</button></td></tr>
+          <tr><td><span class="semaforo s-amber"></span></td><td>XYZ-789</td><td>VH-078</td><td>Mercedes OF-1721 2020</td><td>Juan Rodríguez</td><td>2 abr 2026</td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm">Reasignar</button></td></tr>
+          <tr><td><span class="semaforo s-red"></span></td><td>PQR-456</td><td>VH-031</td><td>Marcopolo G7 2019</td><td>Ana Gómez</td><td>10 ene 2026</td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm">Reasignar</button></td></tr>
+          <tr><td><span class="semaforo s-green"></span></td><td>LMN-321</td><td>VH-055</td><td>Scania K360 2022</td><td>Sin asignar</td><td>12 may 2026</td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm btn-primary">Asignar</button></td></tr>
+        </tbody>
+      </table></div>
+    </div>`,
+
+  maestros: () => `
+    <p class="page-title">Usuarios maestros</p>
+    <p class="page-sub">Equipo de mantenimiento con acceso de consulta</p>
+    <div class="search-row">
+      <input type="text" placeholder="Buscar por nombre o correo...">
+      <button class="btn btn-primary">+ Nuevo maestro</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Nombre</th><th>Correo</th><th>Último acceso</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody>
+          <tr><td>Mario Acosta</td><td>m.acosta@empresa.com</td><td>Hoy 9:32 am</td><td><span class="pill pill-green">Activo</span></td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm btn-danger">Desactivar</button></td></tr>
+          <tr><td>Sara Ríos</td><td>s.rios@empresa.com</td><td>Ayer 3:15 pm</td><td><span class="pill pill-green">Activo</span></td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm btn-danger">Desactivar</button></td></tr>
+          <tr><td>Luis Herrera</td><td>l.herrera@empresa.com</td><td>12 may 2026</td><td><span class="pill pill-gray">Inactivo</span></td><td><button class="btn btn-sm">Editar</button> <button class="btn btn-sm">Activar</button></td></tr>
+        </tbody>
+      </table></div>
+    </div>`,
+
+  nuevo: () => `
+    <p class="page-title">Nuevo afiliado</p>
+    <p class="page-sub">Registro manual de afiliado y bus</p>
+    <div class="card">
+      <div class="card-title">Datos del afiliado</div>
+      <div class="grid2">
+        <div class="field"><label>Nombre completo</label><input type="text" placeholder="Ej: Pedro Martínez"></div>
+        <div class="field"><label>Cédula</label><input type="text" placeholder="Ej: 1.234.567"></div>
+        <div class="field"><label>Correo electrónico</label><input type="text" placeholder="correo@ejemplo.com"></div>
+        <div class="field"><label>Teléfono</label><input type="text" placeholder="300 000 0000"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Bus asignado</div>
+      <div class="grid2">
+        <div class="field"><label>Placa</label><input type="text" placeholder="Ej: ABC-123"></div>
+        <div class="field"><label>Número interno</label><input type="text" placeholder="Ej: VH-099"></div>
+        <div class="field"><label>Marca y modelo</label><input type="text" placeholder="Ej: Volvo B8R"></div>
+        <div class="field"><label>Año</label><input type="text" placeholder="Ej: 2022"></div>
+      </div>
+      <button class="btn btn-sm" style="margin-bottom:4px">+ Agregar otro bus</button>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="alert('Afiliado creado. Credenciales enviadas por correo.')">Crear afiliado y enviar credenciales</button>`,
+
+  'mis-buses': () => `
+    <p class="page-title">Mis buses</p>
+    <p class="page-sub">Selecciona el bus para cargar un mantenimiento</p>
+    <div class="veh-card selected" onclick="selectBus(this,'ABC-123')">
+      <div class="veh-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20"><rect x="1" y="3" width="22" height="14" rx="2"/><path d="M1 9h22M8 21l-2-4M16 21l2-4"/></svg></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:500">ABC-123</div><div style="font-size:12px;color:var(--text2)">N° interno VH-042 · Volvo B8R 2021</div></div>
+      <span class="semaforo s-green"></span>
+    </div>
+    <div class="veh-card" onclick="selectBus(this,'XYZ-789')">
+      <div class="veh-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="20" height="20"><rect x="1" y="3" width="22" height="14" rx="2"/><path d="M1 9h22M8 21l-2-4M16 21l2-4"/></svg></div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:500">XYZ-789</div><div style="font-size:12px;color:var(--text2)">N° interno VH-078 · Mercedes OF-1721 2020</div></div>
+      <span class="semaforo s-amber"></span>
+    </div>
+    <div class="info-box" style="margin-top:8px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>Verde = al día · Amarillo = mantenimiento próximo · Rojo = vencido</span>
+    </div>`,
+
+  'nuevo-mant': () => `
+    <p class="page-title">Nuevo mantenimiento</p>
+    <p class="page-sub">Bus seleccionado: <strong>ABC-123 · VH-042</strong></p>
+    <div class="card">
+      <div class="card-title">Categoría</div>
+      <div class="cat-grid">
+        <div class="cat-btn" onclick="selectCat(this,'red','correctivo')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:22px;height:22px;margin:0 auto 6px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div class="cat-name">Correctivo</div><div class="cat-sub">Reparación de falla</div>
+        </div>
+        <div class="cat-btn selected-green" onclick="selectCat(this,'green','preventivo')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:22px;height:22px;margin:0 auto 6px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <div class="cat-name">Preventivo</div><div class="cat-sub">Programado</div>
+        </div>
+        <div class="cat-btn" onclick="selectCat(this,'blue','predictivo')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:22px;height:22px;margin:0 auto 6px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <div class="cat-name">Predictivo</div><div class="cat-sub">Basado en estado</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tipo de mantenimiento</div>
+      <div class="field">
+        <label>Tipo específico</label>
+        <select id="tipo-select">
+          <option>Cambio de aceite de motor</option>
+          <option>Cambio de filtros</option>
+          <option>Revisión de frenos</option>
+          <option>Cambio de llantas</option>
+          <option>Alineación y balanceo</option>
+          <option>Revisión de batería</option>
+          <option>Cambio de correa de distribución</option>
+          <option>Revisión sistema neumático</option>
+          <option>Revisión puertas automáticas</option>
+          <option>Revisión general</option>
+          <option>Otro preventivo</option>
+        </select>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Fecha</label><input type="date" value="2026-05-17"></div>
+        <div class="field"><label>Kilometraje</label><input type="text" placeholder="Ej: 85,000 km"></div>
+        <div class="field"><label>Taller / proveedor</label><input type="text" placeholder="Nombre del taller"></div>
+      </div>
+      <div class="field"><label>Observaciones</label><textarea placeholder="Describa detalles adicionales..."></textarea></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Evidencias</div>
+      <div class="dropzone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Arrastra o haz clic · Fotos · PDF · RAR · ZIP
+      </div>
+      <div class="file-chips">
+        <span class="fchip">📷 foto_motor.jpg</span>
+        <span class="fchip">📄 factura_taller.pdf</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="alert('Mantenimiento registrado correctamente.')">Guardar mantenimiento</button>`,
+
+  historial: () => `
+    <p class="page-title">Historial · ABC-123</p>
+    <p class="page-sub">VH-042 · Volvo B8R 2021 · Todos los mantenimientos</p>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot tl-dot-green"></div>
+        <div class="tl-card">
+          <div class="tl-header"><span class="tl-tipo">Cambio de aceite de motor</span><span class="pill pill-green">Preventivo</span></div>
+          <div class="tl-meta">17 may 2026 · 85,000 km · Taller AutoBus</div>
+          <div class="file-chips" style="margin-top:8px"><span class="fchip">📷 foto_motor.jpg</span><span class="fchip">📄 factura.pdf</span></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot tl-dot-blue"></div>
+        <div class="tl-card">
+          <div class="tl-header"><span class="tl-tipo">Diagnóstico OBD</span><span class="pill pill-blue">Predictivo</span></div>
+          <div class="tl-meta">2 abr 2026 · 80,200 km · TallerTech</div>
+          <div class="file-chips" style="margin-top:8px"><span class="fchip">📄 reporte_obd.pdf</span></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot tl-dot-red"></div>
+        <div class="tl-card">
+          <div class="tl-header"><span class="tl-tipo">Reparación de caja de cambios</span><span class="pill pill-red">Correctivo</span></div>
+          <div class="tl-meta">15 feb 2026 · 75,400 km · Mecánica Pesada Ltda</div>
+          <div class="file-chips" style="margin-top:8px"><span class="fchip">📷 caja_antes.jpg</span><span class="fchip">📷 caja_despues.jpg</span><span class="fchip">📄 factura.pdf</span></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot tl-dot-green"></div>
+        <div class="tl-card">
+          <div class="tl-header"><span class="tl-tipo">Cambio de llantas</span><span class="pill pill-green">Preventivo</span></div>
+          <div class="tl-meta">10 ene 2026 · 70,100 km · Llantas Diesel</div>
+          <div class="file-chips" style="margin-top:8px"><span class="fchip">📷 llantas.jpg</span></div>
+        </div>
+      </div>
+    </div>`,
+
+  'panel-maestro': () => `
+    <p class="page-title">Dashboard</p>
+    <p class="page-sub">Estado general de la flota · Mayo 2026</p>
+    <div class="grid3">
+      <div class="metric"><div class="metric-val" style="color:var(--green)">218</div><div class="metric-lbl"><span class="semaforo s-green" style="margin-right:6px"></span>Buses al día</div></div>
+      <div class="metric"><div class="metric-val" style="color:var(--amber)">67</div><div class="metric-lbl"><span class="semaforo s-amber" style="margin-right:6px"></span>Mantenimiento próximo</div></div>
+      <div class="metric"><div class="metric-val" style="color:var(--red)">27</div><div class="metric-lbl"><span class="semaforo s-red" style="margin-right:6px"></span>Vencidos</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Por categoría · este mes</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px"><span><span class="semaforo" style="background:var(--green);margin-right:8px"></span>Preventivos</span><span style="font-weight:500;font-family:'DM Mono',monospace">84</span></div>
+          <div style="height:6px;background:var(--bg3);border-radius:4px"><div style="width:68%;height:100%;background:var(--green);border-radius:4px"></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px"><span><span class="semaforo" style="background:var(--red);margin-right:8px"></span>Correctivos</span><span style="font-weight:500;font-family:'DM Mono',monospace">29</span></div>
+          <div style="height:6px;background:var(--bg3);border-radius:4px"><div style="width:23%;height:100%;background:var(--red);border-radius:4px"></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px"><span><span class="semaforo" style="background:var(--blue);margin-right:8px"></span>Predictivos</span><span style="font-weight:500;font-family:'DM Mono',monospace">11</span></div>
+          <div style="height:6px;background:var(--bg3);border-radius:4px"><div style="width:9%;height:100%;background:var(--blue);border-radius:4px"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Registros por mes</div>
+        <div style="display:flex;align-items:flex-end;gap:8px;height:100px;padding-top:10px">
+          ${['Ene','Feb','Mar','Abr','May'].map((m,i)=>{
+            const h=[45,62,58,70,88][i]; const maxH=88;
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span style="font-size:10px;color:var(--text3)">${h}</span>
+              <div style="width:100%;background:var(--blue);border-radius:3px 3px 0 0;height:${Math.round(h/maxH*70)}px;opacity:${i===4?1:.5}"></div>
+              <span style="font-size:10px;color:var(--text3)">${m}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`,
+
+  registros: () => `
+    <p class="page-title">Todos los registros</p>
+    <p class="page-sub">Consulta y descarga de evidencias</p>
+    <div class="search-row">
+      <input type="text" placeholder="Buscar por placa, afiliado, categoría...">
+      <select style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;color:var(--text);outline:none"><option>Todas las categorías</option><option>Correctivo</option><option>Preventivo</option><option>Predictivo</option></select>
+      <input type="month" value="2026-05" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;color:var(--text);outline:none">
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Afiliado</th><th>Bus</th><th>Categoría</th><th>Tipo</th><th>Fecha</th><th>Km</th><th>Archivos</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Juan Rodríguez</td><td>ABC-123</td><td><span class="pill pill-green">Preventivo</span></td><td>Cambio de aceite</td><td>17 may</td><td>85,000</td><td><span class="fchip" style="font-size:11px">📷 📄</span></td><td><button class="btn btn-sm">${ICONS.download} Descargar</button></td></tr>
+          <tr><td>Ana Gómez</td><td>PQR-456</td><td><span class="pill pill-red">Correctivo</span></td><td>Rep. frenos</td><td>15 may</td><td>62,400</td><td><span class="fchip" style="font-size:11px">📷 📷 📄</span></td><td><button class="btn btn-sm">${ICONS.download} Descargar</button></td></tr>
+          <tr><td>Carlos Pérez</td><td>LMN-321</td><td><span class="pill pill-blue">Predictivo</span></td><td>OBD Scanner</td><td>12 may</td><td>74,100</td><td><span class="fchip" style="font-size:11px">📄</span></td><td><button class="btn btn-sm">${ICONS.download} Descargar</button></td></tr>
+          <tr><td>María Torres</td><td>DEF-001</td><td><span class="pill pill-green">Preventivo</span></td><td>Cambio llantas</td><td>10 may</td><td>91,200</td><td><span class="fchip" style="font-size:11px">📷 🗜</span></td><td><button class="btn btn-sm">${ICONS.download} Descargar</button></td></tr>
+        </tbody>
+      </table></div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <button class="btn btn-primary" onclick="alert('Descargando todos los registros del mes...')">${ICONS.download} Descargar todo el mes</button>
+      </div>
+    </div>`,
+
+  flota: () => `
+    <p class="page-title">Estado de flota</p>
+    <p class="page-sub">Semáforo de mantenimiento por bus</p>
+    <div class="search-row">
+      <input type="text" placeholder="Buscar por placa o afiliado...">
+      <select style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;color:var(--text);outline:none"><option>Todos los estados</option><option>Al día</option><option>Próximo</option><option>Vencido</option></select>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Estado</th><th>Placa</th><th>N° interno</th><th>Bus</th><th>Afiliado</th><th>Último mtto</th><th>Próximo</th></tr></thead>
+        <tbody>
+          <tr><td><span class="semaforo s-green"></span></td><td>ABC-123</td><td>VH-042</td><td>Volvo B8R 2021</td><td>Juan Rodríguez</td><td>17 may 2026</td><td><span class="pill pill-green">Al día</span></td></tr>
+          <tr><td><span class="semaforo s-green"></span></td><td>DEF-001</td><td>VH-011</td><td>Scania K360 2022</td><td>María Torres</td><td>10 may 2026</td><td><span class="pill pill-green">Al día</span></td></tr>
+          <tr><td><span class="semaforo s-amber"></span></td><td>XYZ-789</td><td>VH-078</td><td>Mercedes OF-1721</td><td>Juan Rodríguez</td><td>2 abr 2026</td><td><span class="pill pill-amber">En 5 días</span></td></tr>
+          <tr><td><span class="semaforo s-amber"></span></td><td>GHI-555</td><td>VH-033</td><td>Marcopolo G7 2020</td><td>Luis Castro</td><td>28 mar 2026</td><td><span class="pill pill-amber">Esta semana</span></td></tr>
+          <tr><td><span class="semaforo s-red"></span></td><td>PQR-456</td><td>VH-031</td><td>Marcopolo G7 2019</td><td>Ana Gómez</td><td>10 ene 2026</td><td><span class="pill pill-red">Vencido 127 días</span></td></tr>
+          <tr><td><span class="semaforo s-red"></span></td><td>JKL-222</td><td>VH-019</td><td>Volvo B270F 2018</td><td>Carlos Pérez</td><td>5 dic 2025</td><td><span class="pill pill-red">Vencido 163 días</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>`
+};
+function renderSidebar(role) {
+  const nav = ROLES[role].nav;
+  let html = '';
+  nav.forEach(item => {
+    if (item.section) {
+      html += `<div class="nav-section">${item.section}</div>`;
+    } else {
+      const active = item.id === currentPage ? 'active' : '';
+      html += `<button class="nav-item ${active}" onclick="navigate('${item.id}')">${ICONS[item.icon] || ''} ${item.label}</button>`;
+    }
+  });
+  document.getElementById('sidebar').innerHTML = html;
+}
+
+function renderContent() {
+  const fn = PAGES[currentPage];
+  document.getElementById('content').innerHTML = fn ? `<div class="page active">${fn()}</div>` : '<div class="page active"><p>Página no encontrada</p></div>';
+}
+
+function navigate(pageId) {
+  currentPage = pageId;
+  renderSidebar(currentRole);
+  renderContent();
+}
+
+function setRole(role, el) {
+  currentRole = role;
+  const r = ROLES[role];
+  document.getElementById('av').className = `avatar ${r.av}`;
+  document.getElementById('av').textContent = r.initials;
+  document.getElementById('uname').textContent = r.name;
+  document.getElementById('rbadge').className = `role-badge ${r.badge}`;
+  document.getElementById('rbadge').textContent = r.badgeTxt;
+  document.querySelectorAll('.rsw-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  const firstPage = ROLES[role].nav.find(n => n.id);
+  currentPage = firstPage ? firstPage.id : 'dashboard';
+  renderSidebar(role);
+  renderContent();
+}
+
+function selectBus(el, placa) {
+  document.querySelectorAll('.veh-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectCat(el, color, cat) {
+  document.querySelectorAll('.cat-btn').forEach(c => c.className = 'cat-btn');
+  el.classList.add(`selected-${color}`);
+  const tipos = {
+    correctivo: ['Reparación de motor','Cambio de frenos dañados','Reparación de transmisión','Reparación eléctrica','Cambio de bomba de agua','Cambio de correa rota','Reparación sistema neumático','Otro correctivo'],
+    preventivo: ['Cambio de aceite de motor','Cambio de filtros','Revisión de frenos','Cambio de llantas','Alineación y balanceo','Revisión de batería','Cambio de correa de distribución','Revisión sistema neumático','Revisión puertas automáticas','Revisión general','Otro preventivo'],
+    predictivo: ['Diagnóstico escáner OBD','Análisis de aceite','Inspección de desgaste','Revisión de vibraciones','Termografía','Otro predictivo']
+  };
+  const sel = document.getElementById('tipo-select');
+  if (sel) { sel.innerHTML = tipos[cat].map(t => `<option>${t}</option>`).join(''); }
+}
+
+function showPreview() {
+  document.getElementById('preview-card').style.display = 'block';
+}
+
+</script>
+</body>
+</html>
